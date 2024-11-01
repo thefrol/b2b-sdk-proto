@@ -1,8 +1,9 @@
 import { readFileSync, writeFileSync } from "fs"
 import { settings } from "./settings"
-import { chain, intersection, uniqBy } from "lodash"
+import { chain, intersection, min, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
 import { differenceInCalendarDays } from "date-fns"
+import { BoxToBoxApi } from "./src/boxtobox"
 
 type Match ={
     id: number,
@@ -15,6 +16,8 @@ type Match ={
 let successes = 0
 let fails =0
 const progressBar = new SingleBar({format: ' {bar} | good:{successes} bad:{fails} | {value}/{total}',})
+
+const minMatches = 5
 
 const boxtobox = new BoxToBoxApi({token:settings.boxtoboxToken})
 async function main(){
@@ -47,6 +50,8 @@ async function main(){
     const res = chain(preparedTransfermarker)
         .map(tm =>{
             const candidate = chain(preparedSofascoreTeams)
+                .filter(sofa => (sofa.matches.length /tm.matches.length) > 0.5)
+                .filter(sofa => (sofa.matches.length /tm.matches.length) < 2)
                 .map( sofa => ({
                     team:{teamId: sofa.teamId,
                     teamName: sofa.teamName},
@@ -54,7 +59,7 @@ async function main(){
                 }))
                 .sortBy(m => m.intersection.count)
                 .reverse()
-                .first()
+                .first()//  TODO: count not just successes but faults too
                 .value()
             progressBar.increment()
             if(candidate.intersection.count<3 || (candidate.intersection.count / tm.matches.length) < 0.5 ){ // not more that 3 matches difference
@@ -125,7 +130,6 @@ type ShortMatch ={
 }
 function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
     // check if matcher a closer than 2 days
-
     const matches= chain(arr1)
         .map(m1 =>{
             const found = arr2.find(m2 => differenceInCalendarDays(m1.date,m2.date) < 2 && m1.result === m2.result && m1.isHome === m2.isHome)
