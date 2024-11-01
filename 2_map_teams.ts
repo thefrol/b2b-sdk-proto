@@ -16,6 +16,7 @@ let successes = 0
 let fails =0
 const progressBar = new SingleBar({format: ' {bar} | good:{successes} bad:{fails} | {value}/{total}',})
 
+const boxtobox = new BoxToBoxApi({token:settings.boxtoboxToken})
 async function main(){
     const tmMatches: Match[] = JSON.parse(readFileSync(settings.tmMatchesFile).toString())
     const sofaMatches: Match[] = uniqBy(JSON.parse(readFileSync(settings.sofaMatchesFile).toString()),m => m.id)
@@ -23,11 +24,29 @@ async function main(){
     const tmTeams = reduceTeams(tmMatches)
     const sofaTeams = reduceTeams(sofaMatches)
 
+    // getting team mapping
+    const tmTeamsMini = tmTeams.map(team => ({
+        provider: 'tm' as const,
+        id: team.teamId,
+    }))
+    const mappedTeams = await boxtobox.teamMapping(tmTeamsMini, "sofascore")
+    const mappedTransfermarktIds = mappedTeams.map(team => team.tm)
+    const mappedSofascoreIds = mappedTeams.map(team => team.sofascore)
 
-    progressBar.start(tmTeams.length,0,{successes,fails})
-    const res = chain(tmTeams)
+
+    // removing unmapped
+    const preparedTransfermarker = tmTeams
+        .filter(t => !mappedTransfermarktIds.find(mappedId => mappedId === Number(t.teamId)))
+        .filter(t => t.matches.length >=minMatches)
+    const preparedSofascoreTeams = sofaTeams
+        .filter(t => !mappedSofascoreIds.find(mappedId => mappedId === Number(t.teamId)))
+        .filter(t => t.matches.length >=minMatches)
+
+
+    progressBar.start(preparedTransfermarker.length,0,{successes,fails})
+    const res = chain(preparedTransfermarker)
         .map(tm =>{
-            const candidate = chain(sofaTeams)
+            const candidate = chain(preparedSofascoreTeams)
                 .map( sofa => ({
                     team:{teamId: sofa.teamId,
                     teamName: sofa.teamName},
