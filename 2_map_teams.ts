@@ -1,28 +1,28 @@
 import { readFileSync, writeFileSync } from "fs"
 import { settings } from "./settings"
-import { chain, intersection, min, uniqBy } from "lodash"
+import { chain, intersection, intersectionWith, min, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
 import { differenceInCalendarDays, differenceInDays } from "date-fns"
 import { BoxToBoxApi } from "./src/boxtobox"
 
-type Match ={
+type Match = {
     id: number,
     date: string,
     result: string,
-    home:{id: string, name: string},
-    away:{id: string, name: string}
+    home: { id: string, name: string },
+    away: { id: string, name: string }
 }
 
 let successes = 0
-let fails =0
-const progressBar = new SingleBar({format: ' {bar} | ETA {eta}s | found mapping:{successes} not found:{fails} | items: {value}/{total}',})
+let fails = 0
+const progressBar = new SingleBar({ format: ' {bar} | ETA {eta}s | found mapping:{successes} not found:{fails} | items: {value}/{total}', })
 
 const minMatches = 5
 
-const boxtobox = new BoxToBoxApi({token:settings.boxtoboxToken})
-async function main(){
+const boxtobox = new BoxToBoxApi({ token: settings.boxtoboxToken })
+async function main() {
     const tmMatches: Match[] = JSON.parse(readFileSync(settings.tmMatchesFile).toString())
-    const sofaMatches: Match[] = uniqBy(JSON.parse(readFileSync(settings.sofaMatchesFile).toString()),m => m.id)
+    const sofaMatches: Match[] = uniqBy(JSON.parse(readFileSync(settings.sofaMatchesFile).toString()), m => m.id)
 
     const tmTeams = reduceTeams(tmMatches)
     const sofaTeams = reduceTeams(sofaMatches)
@@ -40,31 +40,35 @@ async function main(){
     // removing unmapped
     const preparedTransfermarker = tmTeams
         .filter(t => !mappedTransfermarktIds.find(mappedId => mappedId === Number(t.teamId)))
-        .filter(t => t.matches.length >=minMatches) // remove teams with too less matches for speed-up
+        .filter(t => t.matches.length >= minMatches) // remove teams with too less matches for speed-up
     const preparedSofascoreTeams = sofaTeams
         .filter(t => !mappedSofascoreIds.find(mappedId => mappedId === Number(t.teamId)))
-        .filter(t => t.matches.length >=minMatches) // remove teams with too less matches for speed-up
+        .filter(t => t.matches.length >= minMatches) // remove teams with too less matches for speed-up
 
 
-    progressBar.start(preparedTransfermarker.length,0,{successes,fails})
+    progressBar.start(preparedTransfermarker.length, 0, { successes, fails })
     const res = chain(preparedTransfermarker)
-        .map(tm =>{
+        .map(tm => {
             const candidate = chain(preparedSofascoreTeams)
-                .filter(sofa => (sofa.matches.length /tm.matches.length) > 0.5) // exclude teams with too big defference
-                .filter(sofa => (sofa.matches.length /tm.matches.length) < 2)   // in matches count for speed-up
-                .map( sofa => ({
-                    team:{teamId: sofa.teamId,
-                    teamName: sofa.teamName},
-                    intersection: intersectMatches(tm.matches,sofa.matches),
+                .filter(sofa => (sofa.matches.length / tm.matches.length) > 0.5) // exclude teams with too big defference
+                .filter(sofa => (sofa.matches.length / tm.matches.length) < 2)   // in matches count for speed-up
+                .map(sofa => ({
+                    team: {
+                        teamId: sofa.teamId,
+                        teamName: sofa.teamName
+                    },
+                    intersection: intersectMatches(tm.matches, sofa.matches),
                 }))
                 .sortBy(m => m.intersection.count)
                 .reverse()
                 .first()//  TODO: count not just successes but faults too
                 .value()
             progressBar.increment()
-            if(candidate.intersection.count<3 || (candidate.intersection.count / tm.matches.length) < 0.5 ){ // not more that 3 matches difference
+            if (candidate.intersection.count < 3
+                || (candidate.intersection.count / tm.matches.length) < 0.5
+                || (candidate.intersection.count / candidate.intersection.failsCount) < 3) { // not more that 3 matches difference
                 fails++
-                 progressBar.update({fails})
+                progressBar.update({ fails })
                 return null
             }
             successes++
