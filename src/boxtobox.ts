@@ -11,7 +11,7 @@ type BoxToBoxAuth ={
 type providers = "tm" | "sofascore"
 type ProvideredTeam ={
     provider: providers
-    id: number
+    id: number | string
 }
 
 export interface MappingResponse {
@@ -25,8 +25,8 @@ export type Matches =Record<string, Match>
 export interface Match {
     name:      string;
     league:    string;
-    tm:        number;
-    sofascore: number;
+    tm:        number|null;
+    sofascore: number|null;
 }
 
 export interface Request {
@@ -52,6 +52,8 @@ export class BoxToBoxApi {
             .map(r => r.data)
             .map(r => values(r.matches))
             .flatten()
+            .reject(r => r.tm ===null || r.sofascore===null)
+
             .value()
     }
 }
