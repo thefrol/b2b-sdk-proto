@@ -104,13 +104,13 @@
         "schemas": [
           {
             "name": "tm",
-            "schema": "https://tm-lambda.azurewebsites.net/api/graphql",
-            "tadaOutputLocation": "./src/tm_lambda-env.d.ts"
+            "schema": "./src/tm-lambda.graphql",
+            "tadaOutputLocation": "./src/tm_lambda-env.d.ts",
           },
           {
             "name": "sofascore",
-            "schema": "https://sofascore-lambda.azurewebsites.net/api/graphql",
-            "tadaOutputLocation": "./src/sofascore-env.d.ts"
+            "schema": "./src/sofascore-lambda.graphql",
+            "tadaOutputLocation": "./src/sofascore-env.d.ts",
           }
         ]
       }
