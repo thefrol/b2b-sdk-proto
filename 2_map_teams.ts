@@ -8,8 +8,8 @@ type Match ={
     id: number,
     date: string,
     result: string,
-    home:{id: number, name: string},
-    away:{id: number, name: string}
+    home:{id: string, name: string},
+    away:{id: string, name: string}
 }
 
 let successes = 0
