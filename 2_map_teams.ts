@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "fs"
 import { settings } from "./settings"
 import { chain, intersection, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
+import { differenceInCalendarDays } from "date-fns"
 
 type Match ={
     id: number,
@@ -28,17 +29,16 @@ async function main(){
         .map(tm =>{
             const candidate = chain(sofaTeams)
                 .map( sofa => ({
-                    teamId: sofa.teamId,
-                    teamName: sofa.teamName,
-                    count: intersection(tm.matches, sofa.matches).length,
-                    matches: intersection(tm.matches, sofa.matches)
+                    team:{teamId: sofa.teamId,
+                    teamName: sofa.teamName},
+                    intersection: intersectMatches(tm.matches,sofa.matches),
                 }))
-                .sortBy(m => m.count)
+                .sortBy(m => m.intersection.count)
                 .reverse()
                 .first()
                 .value()
             progressBar.increment()
-            if(candidate.count<3 || (candidate.count / tm.matches.length) < 0.5 ){ // not more that 3 matches difference
+            if(candidate.intersection.count<3 || (candidate.intersection.count / tm.matches.length) < 0.5 ){ // not more that 3 matches difference
                 fails++
                  progressBar.update({fails})
                 return null
@@ -47,8 +47,8 @@ async function main(){
             progressBar.update({successes})
             return {
                 tm,
-                sofa: candidate,
-                count: candidate.count,
+                sofa: candidate.team,
+                count: candidate.intersection.count,
             }
 
         })
@@ -89,10 +89,41 @@ function reduceTeams(matches: Match[]){
         .mapValues(matches => ({
             teamId: matches[0].teamId,
             teamName: matches[0].teamName,
-            matches: matches.map(m => `${m.date}_${m.result}_${m.isHome}`)
+            matches: matches.map(m => ({
+                date: new Date(m.date),
+                result: m.result,
+                isHome: m.isHome,
+            }))
         }))
         .map((v,k)=>v)
         .value()
+}
+
+type ShortMatch ={
+    date: Date,
+    result: string,
+    isHome: boolean,
+}
+function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
+    // check if matcher a closer than 2 days
+
+    const matches= chain(arr1)
+        .map(m1 =>{
+            const found = arr2.find(m2 => differenceInCalendarDays(m1.date,m2.date) < 2 && m1.result === m2.result && m1.isHome === m2.isHome)
+            if(!found){
+                return null
+            }
+            return {
+                match1: m1,
+                match2: found
+            }
+        })
+        .compact()
+        .value()
+        return {
+            count: matches.length,
+            matches
+        }
 }
 
 
