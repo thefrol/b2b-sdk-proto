@@ -15,7 +15,7 @@ type Match ={
 
 let successes = 0
 let fails =0
-const progressBar = new SingleBar({format: ' {bar} | good:{successes} bad:{fails} | {value}/{total}',})
+const progressBar = new SingleBar({format: ' {bar} | ETA {eta}s | found mapping:{successes} not found:{fails} | items: {value}/{total}',})
 
 const minMatches = 5
 
@@ -132,7 +132,7 @@ function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
     // check if matcher a closer than 2 days
     const matches= chain(arr1)
         .map(m1 =>{
-            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && differenceInDays(m1.date,m2.date) < 2)
+            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && Math.abs(differenceInDays(m1.date,m2.date)) < 2)
             if(!found){
                 return null
             }
