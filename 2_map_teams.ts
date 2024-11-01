@@ -68,11 +68,15 @@ async function main(){
                 return null
             }
             successes++
-            progressBar.update({successes})
+            progressBar.update({ successes })
             return {
-                tm,
+                tm: {
+                    teamId: tm.teamId,
+                    teamName: tm.teamName,
+                },
                 sofa: candidate.team,
                 count: candidate.intersection.count,
+                fails: candidate.intersection.failsCount,
             }
 
         })
@@ -82,11 +86,11 @@ async function main(){
     progressBar.stop()
 
 
-    writeFileSync(settings.mappedTeamsFile, JSON.stringify(res,null,4))
+    writeFileSync(settings.mappedTeamsFile, JSON.stringify(res, null, 4))
 
 }
 
-function reduceTeams(matches: Match[]){
+function reduceTeams(matches: Match[]) {
     return chain(matches)
         .map(m => {
             const home = m.home
@@ -103,7 +107,7 @@ function reduceTeams(matches: Match[]){
                 {
                     teamId: away.id,
                     teamName: away.name,
-                    isHome:false,
+                    isHome: false,
                     result, date,
                 }
             ]
@@ -119,21 +123,28 @@ function reduceTeams(matches: Match[]){
                 isHome: m.isHome,
             }))
         }))
-        .map((v,k)=>v)
+        .map((v, k) => v)
         .value()
 }
 
-type ShortMatch ={
+type ShortMatch = {
     date: Date,
     result: string,
     isHome: boolean,
 }
-function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
+function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
     // check if matcher a closer than 2 days
-    const matches= chain(arr1)
-        .map(m1 =>{
-            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && Math.abs(differenceInDays(m1.date,m2.date)) < 2)
-            if(!found){
+
+    // !!! `intersectionWith` is good
+    // but very-very slow, because of
+    // comparint every element to every
+    //
+    // const isect = intersectionWith(arr1,arr2,(m1,m2) => m1.result === m1.result && m2.isHome === m2.isHome && Math.abs(differenceInDays(m1.date,m2.date)) < 2)
+
+    const matches = chain(arr1)
+        .map(m1 => {
+            const found = arr2.find(m2 => m1.result === m2.result && m1.isHome === m2.isHome && Math.abs(differenceInDays(m1.date, m2.date)) < 2)
+            if (!found) {
                 return null
             }
             return {
@@ -143,10 +154,25 @@ function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
         })
         .compact()
         .value()
-        return {
-            count: matches.length,
-            matches
-        }
+
+    const failsCount = arr1.length + arr2.length - (2 * matches.length)
+    const failsFreq = Math.sqrt(
+        (
+            (arr1.length - matches.length) ^ 2
+            + (arr2.length - matches.length ^ 2)
+        )
+        / 
+        (
+            (arr1.length) ^ 2 + (arr2.length) ^ 2
+        )
+    )
+
+    return {
+        failsCount,
+        failsFreq,
+        count: matches.length,
+        matches: matches,
+    }
 }
 
 
