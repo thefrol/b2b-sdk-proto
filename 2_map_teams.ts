@@ -45,13 +45,13 @@ async function main() {
         .filter(t => !mappedSofascoreIds.find(mappedId => mappedId === Number(t.teamId)))
         .filter(t => t.matches.length >= minMatches) // remove teams with too less matches for speed-up
 
-
+    const errs:any[] = []
     progressBar.start(preparedTransfermarker.length, 0, { successes, fails })
-    const res = chain(preparedTransfermarker)
+    const res = chain(preparedTransfermarker.slice(8,9))
         .map(tm => {
             const candidate = chain(preparedSofascoreTeams)
-                .filter(sofa => (sofa.matches.length / tm.matches.length) > 0.5) // exclude teams with too big defference
-                .filter(sofa => (sofa.matches.length / tm.matches.length) < 2)   // in matches count for speed-up
+                // .filter(sofa => (sofa.matches.length / tm.matches.length) > 0.5) // exclude teams with too big defference
+                // .filter(sofa => (sofa.matches.length / tm.matches.length) < 2)   // in matches count for speed-up
                 .map(sofa => ({
                     team: {
                         teamId: sofa.teamId,
@@ -59,16 +59,29 @@ async function main() {
                     },
                     intersection: intersectMatches(tm.matches, sofa.matches),
                 }))
-                .sortBy(m => m.intersection.count)
+                .sortBy(m => m.intersection.successCount - m.intersection.failsCount) // TODO: add a better metric involving fails count too
                 .reverse()
                 .first()//  TODO: count not just successes but faults too
                 .value()
             progressBar.increment()
-            if (candidate.intersection.count < 3
-                || (candidate.intersection.count / tm.matches.length) < 0.5
-                || (candidate.intersection.count / candidate.intersection.failsCount) < 3) { // not more that 3 matches difference
-                fails++
+            if (candidate.intersection.successCount < 3
+                || (candidate.intersection.successCount / candidate.intersection.failsCount) < 3) { // not more that 3 matches difference
+                // also track the miss ratio
+                // when 50 here and 50 on sofa, shoult not be 49 misses
+                // like min arr len / missed count > 0.5
+                    fails++
                 progressBar.update({ fails })
+                errs.push({
+                    tm: {
+                        teamId: tm.teamId,
+                        teamName: tm.teamName,
+                    },
+                    sofa: candidate.team,
+                    successCount: candidate.intersection.successCount,
+                    missCount: candidate.intersection.missCount,
+                    fails: candidate.intersection.failsCount,
+                    matches: candidate.intersection.matches
+                })
                 return null
             }
             successes++
@@ -79,18 +92,21 @@ async function main() {
                     teamName: tm.teamName,
                 },
                 sofa: candidate.team,
-                count: candidate.intersection.count,
+                successCount: candidate.intersection.successCount,
+                missCount: candidate.intersection.missCount,
                 fails: candidate.intersection.failsCount,
+                matches: candidate.intersection.matches
             }
 
         })
         .compact()
-        .sortBy(m => -m.count)
+        .sortBy(m => -m.successCount)
         .value()
     progressBar.stop()
 
 
     writeFileSync(settings.mappedTeamsFile, JSON.stringify(res, null, 4))
+    writeFileSync("errs.json", JSON.stringify(errs, null, 4))
 
 }
 
@@ -145,13 +161,33 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
     //
     // const isect = intersectionWith(arr1,arr2,(m1,m2) => m1.result === m1.result && m2.isHome === m2.isHome && Math.abs(differenceInDays(m1.date,m2.date)) < 2)
 
+    // ---- fast edition-----
+    //
+    // const matches = chain(arr1)
+    //     .map(m1 => {
+    //         const found = arr2.find(m2 => m1.result === m2.result && m1.isHome === m2.isHome && Math.abs(differenceInDays(m1.date, m2.date)) < 2)
+    //         if (!found) {
+    //             return null
+    //         }
+    //         return {
+    //             match1: m1,
+    //             match2: found
+    //         }
+    //     })
+    //     .compact()
+    //     .value()
+
     const matches = chain(arr1)
         .map(m1 => {
-            const found = arr2.find(m2 => m1.result === m2.result && m1.isHome === m2.isHome && Math.abs(differenceInDays(m1.date, m2.date)) < 2)
+            const found = arr2.find(m2 => Math.abs(differenceInDays(m1.date, m2.date)) < 2)
             if (!found) {
-                return null
+                return {
+                    type: "miss" as const
+                }
             }
+            const success =  m1.result === found.result && m1.isHome === found.isHome
             return {
+                type: success? "match" as const : "error" as const,
                 match1: m1,
                 match2: found
             }
@@ -159,22 +195,11 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
         .compact()
         .value()
 
-    const failsCount = arr1.length + arr2.length - (2 * matches.length)
-    const failsFreq = Math.sqrt(
-        (
-            (arr1.length - matches.length) ^ 2
-            + (arr2.length - matches.length ^ 2)
-        )
-        / 
-        (
-            (arr1.length) ^ 2 + (arr2.length) ^ 2
-        )
-    )
 
     return {
-        failsCount,
-        failsFreq,
-        count: matches.length,
+        failsCount:matches.filter(m => m.type === "error").length,
+        successCount: matches.filter(m => m.type === "match").length,
+        missCount: matches.filter(m => m.type === "miss").length,
         matches: matches,
     }
 }
