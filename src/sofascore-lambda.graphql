@@ -1,0 +1,285 @@
+type Query {
+  dummy(id: Int!): String!
+  player(id: Int!, name: String): Player!
+  team(id: Int!, name: String): TeamQuery!
+  search(request: String!): SearchResult!
+  getMatchCompat(id: ID!): MatchCompat!
+  getMatchesByDateCompat(date: String!): [MatchByDateCompat!]!
+  teamMatchesCompat(id: Int!, name: String, limit: Int! = 50): [TeamMatchCompat!]!
+  getCompetitionTablesCompat(id: ID!, name: String, season: String!): [CompetitionTableCompat!]!
+}
+
+type SearchResult {
+  players: [PlayerSearchResult!]!
+  teams: [TeamSearchResult!]!
+  uniqueTournaments: [UniqueTournamentSearchResult!]!
+  matches: [EventSeatchResult!]!
+}
+
+type PlayerSearchResult {
+  score: Float!
+  player: Player!
+}
+
+type TeamSearchResult {
+  score: Float!
+  team: Team!
+}
+
+type UniqueTournamentSearchResult {
+  score: Float!
+  uniqueTournament: UniqueTournament!
+}
+
+type EventSeatchResult {
+  score: Float!
+  event: Event!
+}
+
+type Event {
+  id: Int!
+  fixture: Boolean!
+  result: EventResult!
+  date: EventDate
+  homeTeam: Team!
+  awayTeam: Team!
+}
+
+type EventResult {
+  result: String
+  homeScore: Int
+  awayScore: Int
+}
+
+type EventDate {
+  dateISO: String!
+  date: String!
+  time: String
+}
+
+type TeamQuery {
+  details: Team!
+  players: [Player!]!
+}
+
+type Country {
+  alpha2: String
+  alpha3: String
+  name: String
+  slug: String
+}
+
+type TeamColors {
+  primary: String
+  secondary: String
+  text: String
+}
+
+type Category {
+  name: String
+  slug: String
+  id: Int
+  flag: String
+  alpha2: String
+  country: Country
+}
+
+type UniqueTournament {
+  name: String
+  slug: String
+  primaryColorHex: String
+  secondaryColorHex: String
+  userCount: Int
+  id: Int
+  displayInverseHomeAwayTeams: Boolean
+  category: Category
+}
+
+type Tournament {
+  name: String
+  slug: String
+  priority: Int
+  isLive: Boolean
+  id: Int
+  uniqueTournament: UniqueTournament
+  category: Category
+}
+
+type Team {
+  id: Int!
+  name: String!
+  slug: String!
+  shortName: String
+  gender: String
+  nameCode: String
+  disabled: Boolean
+  national: Boolean
+  teamColors: TeamColors
+  country: Country
+  primaryUniqueTournament: UniqueTournament
+  tournament: Tournament
+}
+
+type Player {
+  id: Int!
+  name: String!
+  slug: String!
+  birthDate: String
+  shirtNumber: Int
+  firstName: String
+  lastName: String
+  shortName: String!
+  foot: String
+  gender: String
+  height: Int
+  contractExpiration: String
+  marketValue: Int
+  retired: Boolean!
+  deceased: Boolean!
+  country: Country
+  team: Team
+}
+
+type CompetitionTableCompat {
+  tableName: String!
+  placements: [CompetitionPlacementCompat!]!
+}
+
+type CompetitionPlacementCompat {
+  targetCompetitionNames: [String!]!
+  position: Int!
+  team: TeamPreviewCompat!
+  matches: Int
+  won: Int
+  draw: Int
+  lost: Int
+  goalsScored: Int
+  goalsConceded: Int
+  goalsDifference: Int
+  points: Int
+}
+
+type MatchCompat {
+  id: ID
+  dataStatus: DataStatusCompat
+  date: String
+  matchDay: String
+  home: TeamPreviewCompat
+  away: TeamPreviewCompat
+  result: String
+  competition: CompetitionPreviewCompat
+  lineups: [LineupCompat]
+  bench: [LineupCompat]
+  goals: [GoalCompat]
+  cards: [CardCompat]
+  substitutions: [SubstitutionCompat]
+  formationHome: String
+  formationAway: String
+  colorKitHome: String
+  colorKitAway: String
+
+  """
+  true if player data contains statistics,
+  that means that each lineup has rating
+  if true
+  """
+  hasStatictics: Boolean!
+  stadium: MatchStadiumPreviewCompat!
+}
+
+type LineupCompat {
+  id: ID!
+  name: String!
+  birthDate: String
+  teamId: ID!
+  number: ID
+  position: String
+  captain: Boolean
+  rating: Float
+}
+
+type SubstitutionCompat {
+  minute: Int!
+  reason: String
+  playerOut: PlayerPreviewCompat!
+  playerIn: PlayerPreviewCompat!
+}
+
+type GoalCompat {
+  minute: Int!
+  info: [String]
+  player: PlayerPreviewCompat!
+}
+
+type CardCompat {
+  minute: Int!
+  type: String
+  info: [String]
+  player: PlayerPreviewCompat!
+}
+
+type TeamPreviewCompat {
+  id: ID!
+  name: String!
+  logo: String
+}
+
+type CompetitionPreviewCompat {
+  id: ID!
+  name: String!
+  logo: String
+}
+
+type PlayerPreviewCompat {
+  id: ID!
+  fullName: String!
+  birthDate: String
+}
+
+enum DataStatusCompat {
+  NONE
+  LINEUPS
+  PARTIAL
+  FULL
+}
+
+type MatchStadiumPreviewCompat {
+  venueId: ID!
+  teamId: ID!
+  stadiumName: String!
+  season: String
+}
+
+type MatchByDateCompat {
+  id: ID
+  competition: CompetitionPreviewCompat
+  dateISO: String
+  date: String!
+  time: String
+  matchDay: String
+  home: TeamPreviewCompat
+  away: TeamPreviewCompat
+  result: String
+  attendance: Int
+  fixture: Boolean!
+}
+
+type TeamMatchCompat {
+  id: ID
+  competition: CompetitionPreviewCompat
+  dateISO: String
+  date: String!
+  time: String
+  matchDay: String
+  home: TeamPreviewCompat
+  away: TeamPreviewCompat
+  result: String
+  attendance: Int
+  fixture: Boolean!
+  coach: CoachCompat
+}
+
+type CoachCompat {
+  id: ID!
+  name: String!
+}

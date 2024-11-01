@@ -26,7 +26,7 @@ export class SofascoreLambda {
     }
   
     async matchesByDate(date:string) {
-        const matchesByDate = sofascore(/**Graphql code with support */`
+        const matchesByDate = sofascore(`#graphql
             query MatchesByDate($date: String!) {
                 getMatchesByDateCompat(date: $date) {
                     id

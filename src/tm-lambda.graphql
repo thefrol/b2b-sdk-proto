@@ -1,0 +1,1001 @@
+type Query {
+  """
+  returns all a list of countries, where each entry contains `id` and `name`, and a `flag`
+  
+  Does not return any competitions for country. To get country competitions use `getCountry()`
+  """
+  allCountries: [Country]
+  google(name: String): GoogleSearch
+  googleFmi(name: String): GoogleFmiSearch!
+
+  """
+  returns country competitions list. May be used to return a flag. 
+  
+  `name` field is always `""`
+  
+  Potentially may be used to return all national teams. Also can be used to show local teams in internationals cups
+  """
+  getCountry(id: ID!): Country
+  getCompetition(id: String, season: String = "2024"): Competition
+  getCompetitionTransfers(id: String, season: String = "2024"): CompetitionTransfers
+
+  """
+  Extracts matches from a given competition, for the first extracts a league page, if not succeded extracts from a cup page, and after fallbach to short matches extraction. This operation can call up to three TM pages, when "type" argument not defined. When "type" is "Cup" or "League" queries only needed pages.
+  
+  On knockout stages, when teams are `TBA`, returns "away" or "home" fields set to null. This may happen on "fixture=true" in schedulead ahead matches, eg. play-off matches has dates on EURO24, but we dont know teams until group stages are fully played
+  
+  Works the same was as getCompetition().matches(), but a more contemporary approach is to use this functions
+  """
+  getCompetitionMatches(id: ID!, name: String, season: String!, type: String): [TeamMatch]!
+
+  """
+  returns matches on a desired date
+  
+  in `date` column of every match the HH:mm time is
+  specified. Like 14:00, 08:30 
+  
+  match `id` may be null, if match is `postponed`. 
+  In such case the `result` will be set to "postponed"
+  and `fixture` to `true`
+  
+  `dateISO` contains a utc formatted string strictly in
+  utc time, unlike `date` and `time` fields, that represent
+  just a raw parsed times
+  """
+  getMatchesByDate(date: String!): [MatchByDate!]!
+  getCompetitionTable(id: ID!, name: String, season: String = "2024"): CompetitionTableDeprecated @deprecated(reason: "use getCompetitionTables() to get multiple tables")
+  getCompetitionTables(id: ID!, name: String, season: String = "2024"): [CompetitionTable!]!
+  getLeagueMatches(id: ID!, name: String, season: String!): [TeamMatch]!
+  getCupMatches(id: ID!, name: String, season: String!): [TeamMatch]!
+  getTeam(id: ID!, name: String, season: String = "2024"): Team
+  getTeamSeasons(id: ID!, name: String): [TeamSeason]!
+  getTeamMatches(id: ID!, name: String, season: String!): [TeamMatch]
+  getTeamVenues(teamId: ID!, season: String): TeamStadiums!
+  getTeamRumors(id: ID!, name: String): TeamRumors
+  getNationalDebuts(id: ID!, name: String, page: Int! = 1, year: Int, trainerId: ID): NationalDebuts!
+  getVenue(teamId: ID!, teamName: String, season: ID, stadiumId: ID): Stadium!
+  getPlayer(id: ID!, name: String): Player
+  getAgency(id: ID!, name: String): Agency
+  getInjuries(id: ID!, name: String, page: Int = 1): PlayerInjuries
+  getPlayerTransfers(id: ID!, name: String): PlayerTransfers
+  getPlayerCups(id: ID!, name: String): PlayerCups
+  getPlayerMatches(id: ID!, name: String, season: String!): [PlayerInMatchPreview]
+
+  """
+  returns all available future matches for a player, also contains injury and suspensions info
+  """
+  getNextMatches(id: ID!): [NextMatch!]!
+  getPlayerRumors(id: ID!, name: String): PlayerRumors!
+  getPlayerRumorsCeapi(id: ID!): [RumorShort]!
+  getCompetitionInjuries(id: ID!): CompetitionInjuries
+  getAcademyPlayers(id: ID!, page: Int, name: String): AcademyPlayers!
+  getTransfersByDay(date: String!, page: Int): TransfersByDay!
+  latestTransfers(page: Int, minMarketValue: Int = 100000, maxMarketValue: Int = 200000000): LatestTransfers
+  latestMarketValueUpdates(page: Int): LatestMarketValueUpdates
+  latestContractExtensions(page: Int): LatestContractExtensions
+  search(name: String): Search
+  getSuspensions(id: ID!, name: String): PlayerSuspensions
+  getPlayerCareer(id: ID!, name: String): PlayerCareer
+  getPlayerNationalTeam(id: ID!, name: String, teamId: ID): PlayerNationalTeam
+  getPlayerNationalCareer(id: ID!, name: String): [PlayerNationalCareerTeam!]
+  getCompetitionSuspensions(id: ID!): CompetitionSuspensions
+  getMarketValueChanges(id: ID!, name: String): MarketValueChanges
+  getLatestFreeCoaches(page: Int): [FreeCoach]
+
+  """
+  Returns career entries for a coach, at what role in what team, and period
+  
+  Since TM does not returns coach agents on career page, agent entry may be null
+  """
+  getCoachCareer(id: ID!, name: String): CoachCareer!
+  getMatch(id: ID!): Match!
+  getMatchLineups(id: ID!): MatchLineups!
+  getTeamStaff(id: ID!, name: String, season: Int): [Staff]
+  latestRumors(page: Int): LatestRumors!
+
+  """"""
+  getFmiPlayer(id: Int!, version: String! = "24.3", name: String): FmiPlayer!
+
+  """
+  returns the current table of opta predictions from https://dataviz.theanalyst.com/opta-football-predictions/
+  
+  receives TM competition id as input. The only valid values are top-5 leagues:
+  + ES1
+  + GB1
+  + L1
+  + FR1
+  + IT1
+  """
+  getOptaPredictions(tmCompetitionId: ID!): OptaTournamentPrediction!
+}
+
+type ManagedTeam {
+  team: TeamPreview!
+  role: String
+  appointed: String!
+  inChargeUntil: String
+  daysInCharge: Int
+  matches: Int
+  win: Int
+  draw: Int
+  lose: Int
+  playersUsed: Int
+  goals: String
+  ppm: Float
+}
+
+type Coach {
+  id: ID!
+  name: String!
+}
+
+type CoachCareer {
+  dateOfBirth: String
+  agent: String
+  nationality: String
+  formation: String
+  currentTeam: TeamPreview
+  teamsManaged: [ManagedTeam]!
+}
+
+type FreeCoach {
+  id: ID!
+  name: String!
+  since: String!
+  lastClubId: ID!
+  lastClubName: String!
+  age: Int
+  pointsPerMatch: Float
+  pointsPerMatchLastClub: Float
+}
+
+type MarketValueChanges {
+  marketValueChanges: [MarketValueChange]!
+}
+
+type MarketValueChange {
+  date: String!
+  age: Int
+  marketValue: Int
+  teamName: String
+  teamId: ID
+}
+
+type PlayerNationalTeam {
+  team: TeamPreview!
+  debut: NationalDebut!
+  matches: [PlayerMatch]
+  career: [PlayerNationalCareerTeam]!
+}
+
+type PlayerNationalCareerTeam {
+  team: TeamPreview!
+  debut: NationalDebut!
+  matches: Int
+  goals: Int
+}
+
+type NationalDebut {
+  matchId: ID
+  date: String
+  coach: Coach
+  age: String!
+}
+
+type PlayerCareer {
+  nationalLeagues: [PlayerCareerSeason]
+  domesticCups: [PlayerCareerSeason]
+  internationalCups: [PlayerCareerSeason]
+}
+
+type PlayerCareerSeason {
+  season: String!
+  competition: CompetitionPreview!
+  team: TeamPreview!
+  matchesPlayed: Int
+  goals: Int
+  assists: Int
+  yellowCards: Int
+  secondYellowCards: Int
+  redCards: Int
+  minutesPlayed: Int
+  ownGoals: Int
+  penaltyGoals: Int
+  substitutionsOn: Int
+  substitutionsOff: Int
+  concededGoals: Int
+  cleanSheets: Int
+}
+
+type Country {
+  id: String!
+  name: String
+  flag: String
+  competitions: [Competition]
+}
+
+type Agency {
+  id: String!
+  name: String
+  phone: String
+  email: String
+  website: String
+  people: [String]
+  players: [Player]
+}
+
+type CompetitionPreview {
+  id: String!
+  name: String!
+  logo: String
+}
+
+type Competition {
+  id: String!
+  countryId: String
+  name: String!
+  teams: [Team]
+  logo: String
+  type: CompetitionType
+  matches(season: String): [TeamMatch] @deprecated(reason: "use getTeamMatches query")
+}
+
+type CompetitionTransfers {
+  competition: Competition
+  transfers: [Transfer]
+}
+
+enum CompetitionType {
+  League
+  Cup
+}
+
+type CompetitionTableDeprecated {
+  transitions: [CompetitionTransition]!
+  placements: [CompetitionPlacementDeprecated]!
+}
+
+type CompetitionTable {
+  tableName: String!
+  placements: [CompetitionPlacement!]!
+}
+
+type CompetitionTransition {
+  color: String
+  competitionName: String
+  places: [Int]!
+}
+
+type CompetitionPlacementDeprecated {
+  targetCompetitionNames: [String!]!
+  position: Int
+  team: TeamPreview
+  matchesCount: Int
+  won: Int
+  draw: Int
+  lost: Int
+  goals: String
+  diff: Int
+  points: Int
+}
+
+"""
+represents a row in league table, matches played,
+some statistics and a competition a team will enter by taking
+this placement in league
+"""
+type CompetitionPlacementFull implements CompetitionPlacement {
+  targetCompetitionNames: [String!]!
+  position: Int!
+  team: TeamPreview!
+  matches: Int!
+  won: Int!
+  draw: Int!
+  lost: Int!
+  goalsScored: Int!
+  goalsConceded: Int!
+  goalsDifference: Int!
+  points: Int!
+}
+
+enum CompetitionPlacementType {
+  full
+  partial
+}
+
+interface CompetitionPlacement {
+  targetCompetitionNames: [String!]!
+  position: Int!
+  team: TeamPreview!
+  matches: Int
+  won: Int
+  draw: Int
+  lost: Int
+  goalsScored: Int
+  goalsConceded: Int
+  goalsDifference: Int
+  points: Int
+}
+
+type CompetitionPlacementPartial implements CompetitionPlacement {
+  targetCompetitionNames: [String!]!
+  position: Int!
+  team: TeamPreview!
+  matches: Int
+  won: Int
+  draw: Int
+  lost: Int
+  goalsScored: Int
+  goalsConceded: Int
+  goalsDifference: Int
+  points: Int
+}
+
+type Search {
+  players: [Player]
+  teams: [SearchTeam!]
+  competitions: [SearchCompetition!]
+}
+
+type SearchTeam {
+  id: Int!
+  name: String!
+
+  """ id may be parsed too"""
+  countryName: String
+  competitionId: ID
+  competitionName: String
+  marketValue: Int
+}
+
+type SearchCompetition {
+  id: ID!
+  name: String!
+
+  """ id may be parsed too"""
+  countryName: String
+  clubsCount: Int
+  playersCount: Int
+  totalMarketValue: Float
+  meanMarketValue: Int
+  continent: String
+}
+
+type GoogleSearch {
+  players: [GooglePlayer]
+  teams: [GooglePlayer!]!
+}
+
+"""
+represents a result of google search. Found ids are separated to teams and players
+"""
+type GoogleFmiSearch {
+  players: [FmiGoogleResult!]!
+  teams: [FmiGoogleResult!]!
+}
+
+type FmiGoogleResult {
+  id: Int!
+  name: String!
+  href: String!
+}
+
+type GooglePlayer {
+  id: ID
+  href: String
+  name: String
+}
+
+type TransfersByDay {
+  transfers: [Transfer]!
+  totalPages: Int!
+}
+
+type LatestTransfers {
+  transfers: [PlayerTransfer]
+  totalPages: Int!
+}
+
+type PlayerCups {
+  player: Player
+  cups: [Cup]
+}
+
+type Cup {
+  name: String
+  imageUrl: String
+  seasons: [CupSeason]
+}
+
+type CupSeason {
+  season: String
+  team: Team
+}
+
+type PlayerInjuries {
+  player: Player
+  injuries: [Injury]
+  totalPages: Int!
+}
+
+type Injury {
+  season: String
+  injury: String
+  from: String
+  until: String
+  daysMissed: String
+  gamesMissed: Int
+}
+
+type CompetitionInjuries {
+  competition: Competition
+  injuries: [OngoingInjury]
+}
+
+type OngoingInjury {
+  player: Player
+  description: String
+  from: String
+  until: String
+}
+
+type PlayerTransfers {
+  player: Player
+  transfers: [Transfer]
+}
+
+type PlayerTransfer {
+  player: Player
+  transfer: Transfer
+}
+
+type Transfer {
+  id: ID
+  player: Player
+  date: String
+  inOrOut: String
+  fromTeamId: ID
+  fromTeamName: String
+  toTeamId: ID
+  toTeamName: String
+  fromLeagueId: ID
+  fromLeagueName: String
+  toLeagueId: ID
+  toLeagueName: String
+  concernedTeam: Team
+  type: String
+  price: String
+  marketValue: String
+}
+
+type LatestMarketValueUpdates {
+  updates: [PlayerMarketValueUpdate]
+  totalPages: Int!
+}
+
+type PlayerMarketValueUpdate {
+  player: Player
+  update: MarketValueUpdate
+}
+
+type MarketValueUpdate {
+  date: String
+  marketValue: String
+  oldMarketValue: String
+}
+
+type LatestContractExtensions {
+  extensions: [PlayerContractExtension]
+  totalPages: Int!
+}
+
+type PlayerContractExtension {
+  player: Player
+  extension: ContractExtension
+}
+
+type ContractExtension {
+  date: String
+  contractExpiration: String
+  option: String
+}
+
+type PlayerMatch {
+  id: ID
+  date: String
+  matchDay: String
+  venue: String
+  home: Team
+  away: Team
+  result: String
+  status: String
+  position: String
+  minutesOnField: Int
+  competition: Competition
+  goals: Int
+  assists: Int
+  ownGoals: Int
+  yellowCardMinute: String
+  secondYellowCardMinute: String
+  redCardMinute: String
+  subbedOnMinute: String
+  subbedOffMinute: String
+  injuried: Boolean
+}
+
+type PlayerInMatchPreview {
+  id: ID
+  season: Preview
+  date: String
+  matchDay: String
+  venue: String
+  home: TeamPreview
+  away: TeamPreview
+
+  """id and name of a team, the player was expected to play"""
+  playerTeam: TeamPreview
+  result: String
+  status: String
+
+  """Wider status explanation, with bench, injuries and suspensions"""
+  statusExtended: PlayerMatchStatus
+  position: String
+  minutesOnField: Int
+  competition: CompetitionPreview
+  goals: Int
+  assists: Int
+  ownGoals: Int
+  yellowCardMinute: String
+  secondYellowCardMinute: String
+  redCardMinute: String
+  subbedOnMinute: String
+  subbedOffMinute: String
+
+  """if a player was injuried during the match"""
+  injuried: Boolean
+}
+
+"""a preview of a future match of a player"""
+type NextMatch {
+  id: Int!
+  home: TeamPreview!
+  away: TeamPreview!
+  competition: CompetitionPreview!
+  matchDay: String
+  group: String
+  result: String!
+  status: String!
+  injury: String
+  suspension: String
+  date: String!
+  time: String!
+}
+
+"""A enum of all statuses of a player in a match"""
+enum PlayerMatchStatus {
+  PLAYED
+  BENCH
+  INJURY
+  SUSPENSION
+  NOT_SELECTED
+}
+
+type TeamMatch {
+  id: ID
+  competition: CompetitionPreview
+  date: String
+  time: String
+  matchDay: String
+  formation: String
+  home: TeamPreview
+  away: TeamPreview
+  result: String
+  coach: Coach
+  attendance: Int
+  fixture: Boolean
+}
+
+"""
+ A match of match by date 
+
+Has a dateISO as a UTC time, insted
+of fieds date and time making a 
+raw responses from page
+"""
+type MatchByDate {
+  id: ID
+  competition: CompetitionPreview
+  dateISO: String
+  date: String!
+  time: String
+  matchDay: String
+  formation: String
+  home: TeamPreview
+  away: TeamPreview
+  result: String
+  coach: Coach
+  attendance: Int
+  fixture: Boolean
+}
+
+type TeamStadiums {
+  main: Stadium!
+  secondary: [Stadium]!
+}
+
+type Stadium {
+  id: ID
+  name: String
+  address: String
+  capacity: Int
+  location: Location
+}
+
+type StadiumPreview {
+  id: ID!
+  name: String!
+}
+
+type MatchStadiumPreview {
+  teamId: ID!
+  stadiumName: String!
+  season: String
+}
+
+type Location {
+  lat: Float
+  long: Float
+}
+
+enum DataStatus {
+  NONE
+  LINEUPS
+  PARTIAL
+  FULL
+}
+
+type Match {
+  id: ID
+  dataStatus: DataStatus
+  date: String
+  time: String
+  dateISO: String
+  matchDay: String
+  home: TeamPreview
+  away: TeamPreview
+  result: String
+  competition: CompetitionPreview
+  lineups: [Lineup]
+  bench: [Lineup]
+  goals: [Goal]
+  cards: [Card]
+  substitutions: [Substitution]
+  formationHome: String
+  formationAway: String
+  colorKitHome: String
+  colorKitAway: String
+  stadium: MatchStadiumPreview!
+}
+
+"""Returns a match lineups"""
+type MatchLineups {
+  id: ID!
+  date: String!
+  matchDay: String!
+  home: TeamPreview!
+  away: TeamPreview!
+  result: String!
+  competition: CompetitionPreview!
+  lineups: [Lineup!]!
+  bench: [Lineup!]!
+}
+
+type Lineup {
+  id: ID!
+  name: String
+  teamId: ID!
+  number: ID
+  position: String
+  captain: Boolean
+}
+
+type Substitution {
+  minute: Int!
+  reason: String
+  playerOut: PlayerPreview!
+  playerIn: PlayerPreview!
+}
+
+type Goal {
+  minute: Int!
+  info: [String]
+  player: PlayerPreview!
+}
+
+type Card {
+  minute: Int!
+  type: String
+  info: [String]
+  player: PlayerPreview!
+}
+
+type TeamPreview {
+  id: ID!
+  name: String!
+  logo: String
+}
+
+type Team {
+  id: ID
+  name: String
+  players: [Player]
+  countryId: String
+  countryName: String
+  competitionId: String
+  leagueId: String
+  leagueName: String
+  marketValue: String
+  stadium: String
+  logo: String
+  url: String
+  matches(season: String): [TeamMatch] @deprecated(reason: "use getCompetitionMatches query")
+  position: ID
+}
+
+type TeamSeason {
+  season: String!
+  leagueId: String!
+  leagueName: String!
+  win: Int
+  draw: Int
+  loose: Int
+  goals: String!
+  points: Int
+  rank: Int
+  coach: Coach
+}
+
+type PlayerPreview {
+  id: ID!
+  fullName: String
+}
+
+type Player {
+  id: ID
+  teamId: ID
+  countryId: ID
+  competitionId: String
+  teamName: String
+  onLoanFromTeamId: ID
+  onLoanFromTeamName: String
+  number: String
+  name: String
+  nameInHomeCountry: String
+  citizenship: [String]
+  nationalTeam: String
+  nationalTeamCaps: String
+  nationalTeamGoals: String
+  firstName: String
+  lastName: String
+  fullName: String
+  position: String
+  image: String
+  age: String
+  joinedClub: String
+  dateOfBirth: String
+  marketValue: String
+  contractExpiration: String
+
+  """ `New arrival`, `To leave` etc. A ribbon on top right cornaer of a player page. Returns null when no flag found 
+  """
+  transferFlag: String
+  loanExpiration: String
+  lastContractExtension: String
+  height: Int
+  foot: String
+  description: String
+  matches(season: String): [PlayerMatch] @deprecated(reason: "use getPlayerMatches query")
+  tmUrl: String
+  twitterProfile: String
+  instagramProfile: String
+  facebookProfile: String
+  agent: String
+  agentId: ID
+  agentVerified: Boolean!
+  placeOfBirth: String
+  outfitter: String
+  currentProblem: String
+  clubOption: String
+  youthClubs: String
+}
+
+type PlayerSuspensions {
+  suspensions: [PlayerSuspension]
+}
+
+type AcademyPlayer {
+  id: ID
+  name: String
+  youthTeams: Int
+  ageGroup: Int
+}
+
+type AcademyPlayers {
+  players: [AcademyPlayer]!
+  totalPages: Int!
+}
+
+type CompetitionSuspensions {
+  suspensions: [CompetitonSuspension]
+}
+
+type CompetitonSuspension {
+  player: PlayerPreview!
+  suspension: String!
+  from: String!
+  until: String
+  gamesMissed: Int
+}
+
+type PlayerSuspension {
+  competition: CompetitionPreview
+  team: TeamPreview
+  season: String!
+  suspension: String!
+  from: String!
+  until: String
+  gamesMissed: Int
+}
+
+type Staff {
+  id: ID!
+  name: String!
+  position: String
+  age: Int
+  appointed: String
+  contractUntil: String
+  image: String
+}
+
+type LatestRumors {
+  Rumors: [LatestRumor]!
+  totalPages: Int!
+}
+
+type LatestRumor {
+  id: ID!
+  player: RumorPlayerPreview!
+  fromTeam: TeamPreview
+  fromLeague: CompetitionPreview
+  toTeam: TeamPreview
+  toLeague: CompetitionPreview
+  contractUntil: String
+  marketValue: Int
+  lastReply: String
+  probability: Int
+}
+
+type PlayerRumors {
+  actual: [Rumor]!
+  archive: [Rumor]!
+}
+
+type TeamRumors {
+  incoming: [Rumor]!
+  leaving: [Rumor]!
+}
+
+type Rumor {
+  id: ID!
+  player: RumorPlayerPreview!
+  fromTeam: TeamPreview
+  toTeam: TeamPreview
+  contractUntil: String
+  marketValue: Int
+  lastReply: String
+
+  """
+  a value between 0 and 100, or null if
+  probability not definedd on TM
+  """
+  probability: Int
+}
+
+"""A player rumor we get from ceapi, shorter than the page-parsed one"""
+type RumorShort {
+  """
+  we do not have the actual id, so we build it from the forum post
+  the id of the forum post 'forum_id-thread_id'
+  """
+  id: ID!
+  player: RumorPlayerPreview!
+  toTeam: TeamPreview
+
+  """ null or int between 0 and 100 """
+  probability: Int
+}
+
+type RumorPlayerPreview {
+  id: ID!
+  name: String
+}
+
+type NationalDebuts {
+  players: [NationalDebutant]!
+  totalPages: Int
+}
+
+type NationalDebutant {
+  id: ID!
+  name: String
+  position: String
+  team: TeamPreview
+  date: String
+  appearances: Int
+  goals: Int
+  ageAtDebut: String
+}
+
+"""
+A basic type containing an `id` and a `name`, may be used for player, team, season or competition
+"""
+type Preview {
+  id: ID!
+  name: String!
+}
+
+""""""
+type FmiPlayer {
+  name: String!
+
+  """normalized to [0,200]"""
+  ability: Int!
+
+  """normalized to [0,200]"""
+  potential: Int!
+
+  """player wage in euros, may be null"""
+  wage: Int
+
+  """player market value in euros, may be null if player `not for sale`"""
+  value: Int
+
+  """normalized to [0,20]"""
+  parameters: [FmiParameter!]!
+}
+
+type FmiParameter {
+  name: String!
+  value: Float
+}
+
+type OptaTournamentPrediction {
+  lastUpdated: String!
+  optaTournamentId: String!
+  optaCompetitionId: String!
+  optaCompetitionName: String!
+  startDate: String!
+  endDate: String!
+  teams: [OptaTeamPrediction!]!
+}
+
+type OptaTeamPrediction {
+  optaTeamId: String!
+  optaTeamName: String!
+  optaTeamCode: String!
+  rank: Int
+  positionPrediction: [OptaPositionPrediction!]!
+  rankPrediction: [OptaRankPrediction!]!
+}
+
+type OptaPositionPrediction {
+  position: Int!
+  value: Float!
+}
+
+type OptaRankPrediction {
+  """eg. UEFA"""
+  rankStatus: String!
+  rankId: String!
+  value: Float!
+}

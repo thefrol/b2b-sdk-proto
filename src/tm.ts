@@ -24,7 +24,7 @@ export class TmLambda {
     }
   
     async matchesByDate(date:string) {
-        const matchesByDate = tm(/**Graphql code with support */`
+        const matchesByDate = tm(`#graphql
             query MatchesByDate($date: String!) {
                 getMatchesByDate(date: $date) {
                     id
