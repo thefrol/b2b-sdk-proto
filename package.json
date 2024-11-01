@@ -23,6 +23,7 @@
     "chalk": "^5.3.0",
     "cli-progress": "^3.12.0",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.4.5",
     "gql.tada": "^1.8.10",
     "install": "^0.13.0",
     "lodash": "^4.17.21",
