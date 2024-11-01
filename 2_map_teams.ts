@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "fs"
 import { settings } from "./settings"
 import { chain, intersection, min, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
-import { differenceInCalendarDays } from "date-fns"
+import { differenceInCalendarDays, differenceInDays } from "date-fns"
 import { BoxToBoxApi } from "./src/boxtobox"
 
 type Match ={
@@ -132,7 +132,7 @@ function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
     // check if matcher a closer than 2 days
     const matches= chain(arr1)
         .map(m1 =>{
-            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && differenceInCalendarDays(m1.date,m2.date) < 2)
+            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && differenceInDays(m1.date,m2.date) < 2)
             if(!found){
                 return null
             }
