@@ -40,18 +40,18 @@ async function main(){
     // removing unmapped
     const preparedTransfermarker = tmTeams
         .filter(t => !mappedTransfermarktIds.find(mappedId => mappedId === Number(t.teamId)))
-        .filter(t => t.matches.length >=minMatches)
+        .filter(t => t.matches.length >=minMatches) // remove teams with too less matches for speed-up
     const preparedSofascoreTeams = sofaTeams
         .filter(t => !mappedSofascoreIds.find(mappedId => mappedId === Number(t.teamId)))
-        .filter(t => t.matches.length >=minMatches)
+        .filter(t => t.matches.length >=minMatches) // remove teams with too less matches for speed-up
 
 
     progressBar.start(preparedTransfermarker.length,0,{successes,fails})
     const res = chain(preparedTransfermarker)
         .map(tm =>{
             const candidate = chain(preparedSofascoreTeams)
-                .filter(sofa => (sofa.matches.length /tm.matches.length) > 0.5)
-                .filter(sofa => (sofa.matches.length /tm.matches.length) < 2)
+                .filter(sofa => (sofa.matches.length /tm.matches.length) > 0.5) // exclude teams with too big defference
+                .filter(sofa => (sofa.matches.length /tm.matches.length) < 2)   // in matches count for speed-up
                 .map( sofa => ({
                     team:{teamId: sofa.teamId,
                     teamName: sofa.teamName},
