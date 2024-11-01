@@ -132,7 +132,7 @@ function intersectMatches(arr1: ShortMatch[], arr2:ShortMatch[]){
     // check if matcher a closer than 2 days
     const matches= chain(arr1)
         .map(m1 =>{
-            const found = arr2.find(m2 => differenceInCalendarDays(m1.date,m2.date) < 2 && m1.result === m2.result && m1.isHome === m2.isHome)
+            const found = arr2.find(m2 =>  m1.result === m2.result && m1.isHome === m2.isHome && differenceInCalendarDays(m1.date,m2.date) < 2)
             if(!found){
                 return null
             }
