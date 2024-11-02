@@ -13,6 +13,7 @@ export const settings = {
     teamsConfidenceLevel: 5, // how many matches are needed to be considered a mapping
 
     boxtoboxToken,
+    airtableKey: process.env.AIRTABLE_TOKEN,
 }
 
 
