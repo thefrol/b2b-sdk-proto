@@ -18,6 +18,16 @@ let fails = 0
 const progressBar = new SingleBar({ format: ' {bar} | ETA {eta}s | found mapping:{successes} not found:{fails} | items: {value}/{total}', })
 
 const minMatches = 5
+/** An amount of teams to process on a current run.
+ * 
+ * Will take `teamsToMapCount` random teams from a
+ * list attemp to map them. Mapping more than 10 teams
+ * may be very long if there are a lot of matches. 
+ * 
+ * So with this setting the teams may be mapped 
+ * iteratevery
+ */
+const teamsToMapCount = 50
 
 const boxtobox = new BoxToBoxApi({ token: settings.boxtoboxToken })
 async function main() {
@@ -51,7 +61,7 @@ async function main() {
      */
     const limitedTm = chain(preparedTransfermarker)
         .shuffle() // always different teams
-        .slice(0, 1)
+        .slice(0, teamsToMapCount)
         .value()
 
     const errs: any[] = []
