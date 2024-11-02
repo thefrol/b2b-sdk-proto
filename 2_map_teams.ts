@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "fs"
 import { settings } from "./settings"
-import { chain, intersection, intersectionWith, min, uniqBy } from "lodash"
+import { chain, intersection, intersectionWith, max, min, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
 import { differenceInCalendarDays, differenceInDays } from "date-fns"
 import { BoxToBoxApi } from "./src/boxtobox"
@@ -51,10 +51,10 @@ async function main() {
      */
     const limitedTm = chain(preparedTransfermarker)
         .shuffle() // always different teams
-        .slice(0,200)
+        .slice(0, 1)
         .value()
 
-    const errs:any[] = []    
+    const errs: any[] = []
     progressBar.start(limitedTm.length, 0, { successes, fails })
     const res = chain(limitedTm)
         .map(tm => {
@@ -73,29 +73,12 @@ async function main() {
                 .first()//  TODO: count not just successes but faults too
                 .value()
             progressBar.increment()
-            if (candidate.intersection.successCount < 3
-                || (candidate.intersection.successCount / candidate.intersection.failsCount) < 3) { // not more that 3 matches difference
-                // also track the miss ratio
-                // when 50 here and 50 on sofa, shoult not be 49 misses
-                // like min arr len / missed count > 0.5
-                    fails++
-                progressBar.update({ fails })
-                errs.push({
-                    tm: {
-                        teamId: tm.teamId,
-                        teamName: tm.teamName,
-                    },
-                    sofa: candidate.team,
-                    successCount: candidate.intersection.successCount,
-                    missCount: candidate.intersection.missCount,
-                    fails: candidate.intersection.failsCount,
-                    matches: candidate.intersection.matches
-                })
-                return null
-            }
-            successes++
-            progressBar.update({ successes })
-            return {
+
+            /** The result is found,
+             * we need just to check if
+             * will we drop it, or save it
+             */
+            const result = {
                 tm: {
                     teamId: tm.teamId,
                     teamName: tm.teamName,
@@ -103,9 +86,31 @@ async function main() {
                 sofa: candidate.team,
                 successCount: candidate.intersection.successCount,
                 missCount: candidate.intersection.missCount,
+                minMatches: candidate.intersection.minMatches,
+                maxMatches: candidate.intersection.maxMatchec,
                 fails: candidate.intersection.failsCount,
                 matches: candidate.intersection.matches
             }
+
+            if (
+                candidate.intersection.successCount < 3
+                || (candidate.intersection.successCount / candidate.intersection.failsCount) < 3
+            ) { // not more that 3 matches difference
+                // high confidence is when successCount > missCount
+                //
+                // but one array may be bigger that others
+
+                // also track the miss ratio
+                // when 50 here and 50 on sofa, shoult not be 49 misses
+                // like min arr len / missed count > 0.5
+                fails++
+                progressBar.update({ fails })
+                errs.push(result)
+                return null
+            }
+            successes++
+            progressBar.update({ successes })
+            return result
 
         })
         .compact()
@@ -195,11 +200,11 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
                     type: "miss" as const
                 }
             }
-            const m1Result = m1.result.slice(0,4) // may contain "0:1 AET" and other values
-            const foundResult = found.result.slice(0,4)
-            const success =  m1Result === foundResult && m1.isHome === found.isHome
+            const m1Result = m1.result.slice(0, 4) // may contain "0:1 AET" and other values
+            const foundResult = found.result.slice(0, 4)
+            const success = m1Result === foundResult && m1.isHome === found.isHome
             return {
-                type: success? "match" as const : "error" as const,
+                type: success ? "match" as const : "error" as const,
                 match1: m1,
                 match2: found
             }
@@ -209,9 +214,12 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
 
 
     return {
-        failsCount:matches.filter(m => m.type === "error").length,
+        failsCount: matches.filter(m => m.type === "error").length,
         successCount: matches.filter(m => m.type === "match").length,
         missCount: matches.filter(m => m.type === "miss").length,
+        /** the minimal amount of matches on a team when compared */
+        minMatches: min([arr1.length, arr2.length]),
+        maxMatchec: max([arr1.length, arr2.length]),
         matches: matches,
     }
 }
