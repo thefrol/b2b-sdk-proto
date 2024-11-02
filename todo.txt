@@ -1,0 +1,15 @@
+            {
+                "type": "error",
+                "match1": {
+                    "date": "2023-10-16T00:00:00.000Z",
+                    "result": "2:2",
+                    "isHome": false
+                },
+                "match2": {
+                    "date": "2023-10-16T00:00:00.000Z",
+                    "result": "2:2",
+                    "isHome": true
+                }
+            },
+
+inversigate on sofascore field about inversing teams
