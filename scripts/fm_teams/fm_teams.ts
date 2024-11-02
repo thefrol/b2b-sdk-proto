@@ -42,12 +42,14 @@ async function main(){
     const res = await airtable.all()
     mpb.done(downloadTask,{message: `Received ${res.length} records`})
 
+    const unmapped = res.filter(r => !r.fields.Transfermarkt)
+
     const findTask = "Find FM Teams"
-    const all = res.length
+    const all = unmapped.length
     let notFoundCount =0
     mpb.addTask(findTask, {type: "percentage", message: "Quering Airtable"})
     await PromisePool
-        .for(res)
+        .for(unmapped)
         .withConcurrency(3)
         .onTaskFinished((t,i) =>{
             mpb.updateTask(findTask, {percentage: i.processedPercentage()/100, message: `${i.processedCount()}/${all} not found: ${notFoundCount}`})
@@ -64,8 +66,10 @@ async function main(){
                 return
             }
 
-            const match = foundTeams.find(t => t.countryName === country)
-            if(!match){
+            const countriesMatch = foundTeams.find(t => t.countryName === country)
+            const mostConfidentByTm = foundTeams[0]
+            const match = countriesMatch || mostConfidentByTm
+            if(countriesMatch){
                 notFoundCount++
                 return
             }
