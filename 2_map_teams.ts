@@ -180,12 +180,15 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
     const matches = chain(arr1)
         .map(m1 => {
             const found = arr2.find(m2 => Math.abs(differenceInDays(m1.date, m2.date)) < 2)
-            if (!found) {
+            // handle tm specific value
+            if (!found || found.result === "-:-" || m1.result === "-:-") {
                 return {
                     type: "miss" as const
                 }
             }
-            const success =  m1.result === found.result && m1.isHome === found.isHome
+            const m1Result = m1.result.slice(0,4) // may contain "0:1 AET" and other values
+            const foundResult = found.result.slice(0,4)
+            const success =  m1Result === foundResult && m1.isHome === found.isHome
             return {
                 type: success? "match" as const : "error" as const,
                 match1: m1,
