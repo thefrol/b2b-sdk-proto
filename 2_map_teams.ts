@@ -45,9 +45,18 @@ async function main() {
         .filter(t => !mappedSofascoreIds.find(mappedId => mappedId === Number(t.teamId)))
         .filter(t => t.matches.length >= minMatches) // remove teams with too less matches for speed-up
 
-    const errs:any[] = []
-    progressBar.start(preparedTransfermarker.length, 0, { successes, fails })
-    const res = chain(preparedTransfermarker.slice(8,9))
+
+    /** When there are too many teams, it works so  slow, 
+     * so we take only random 200 teams
+     */
+    const limitedTm = chain(preparedTransfermarker)
+        .shuffle() // always different teams
+        .slice(0,200)
+        .value()
+
+    const errs:any[] = []    
+    progressBar.start(limitedTm.length, 0, { successes, fails })
+    const res = chain(limitedTm)
         .map(tm => {
             const candidate = chain(preparedSofascoreTeams)
                 // .filter(sofa => (sofa.matches.length / tm.matches.length) > 0.5) // exclude teams with too big defference
