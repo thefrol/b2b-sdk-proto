@@ -1,8 +1,8 @@
-import { readFileSync, writeFileSync } from "fs"
-import { settings } from "./settings"
-import { chain, intersection, intersectionWith, max, min, uniqBy } from "lodash"
 import { SingleBar } from "cli-progress"
-import { differenceInCalendarDays, differenceInDays } from "date-fns"
+import { differenceInDays } from "date-fns"
+import { readFileSync, writeFileSync } from "fs"
+import { chain, max, min, uniqBy } from "lodash"
+import { settings } from "./settings"
 import { BoxToBoxApi } from "./src/boxtobox"
 
 type Match = {
@@ -68,9 +68,9 @@ async function main() {
                     },
                     intersection: intersectMatches(tm.matches, sofa.matches),
                 }))
-                .sortBy(m => m.intersection.successCount - m.intersection.failsCount) // TODO: add a better metric involving fails count too
+                .sortBy(m => m.intersection.successCount - m.intersection.failsCount) // TODO: add a better metric, check on already known teams
                 .reverse()
-                .first()//  TODO: count not just successes but faults too
+                .first()
                 .value()
             progressBar.increment()
 
@@ -95,14 +95,8 @@ async function main() {
             if (
                 candidate.intersection.successCount < 3
                 || (candidate.intersection.successCount / candidate.intersection.failsCount) < 3
-            ) { // not more that 3 matches difference
-                // high confidence is when successCount > missCount
-                //
-                // but one array may be bigger that others
-
-                // also track the miss ratio
-                // when 50 here and 50 on sofa, shoult not be 49 misses
-                // like min arr len / missed count > 0.5
+                || (candidate.intersection.missCount / candidate.intersection.minMatches) <0.5 // there should not be 3 success 15 missed if a min array  is 16, and can be if min array is 3
+            ) { 
                 fails++
                 progressBar.update({ fails })
                 errs.push(result)
@@ -218,8 +212,8 @@ function intersectMatches(arr1: ShortMatch[], arr2: ShortMatch[]) {
         successCount: matches.filter(m => m.type === "match").length,
         missCount: matches.filter(m => m.type === "miss").length,
         /** the minimal amount of matches on a team when compared */
-        minMatches: min([arr1.length, arr2.length]),
-        maxMatchec: max([arr1.length, arr2.length]),
+        minMatches: min([arr1.length, arr2.length]) || 0,
+        maxMatchec: max([arr1.length, arr2.length]) || 0,
         matches: matches,
     }
 }
