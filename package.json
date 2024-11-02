@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "schema:update":"npx ts-node ./generate.tada.ts"
+    "schema:update": "npx ts-node ./generate.tada.ts"
   },
   "author": "",
   "license": "ISC",
